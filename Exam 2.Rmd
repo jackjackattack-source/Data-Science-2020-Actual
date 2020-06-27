@@ -1,6 +1,9 @@
 ---
 title: "Exam 2-Jackson Freeman"
-output: word_document
+output:
+  word_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -10,11 +13,12 @@ rm(list=ls(all=TRUE))
 #set the working directory
 setwd("C:/Users/Jack/Documents/Data Science 2020")
 #import data as data frame
+library(rio)
 inequality_data<-import("inequality.xlsx")
 ```
 
 1.) This data is cross-sectional-it is taken at one point in time (2015). Using the rio package and the HEAD function, we can show this concept.
-```{r, include=True}
+```{r, include=TRUE}
 head(inequality_data)
 ```
 2.) Subset for Gini of Denmark and Sweden
@@ -47,10 +51,12 @@ head(inequality_data)
 
 7.) Sorting countries by lowest gini score.
 ```{r sorting data, include=FALSE}
+library(dplyr)
 inequality_data<- arrange(inequality_data,inequality_gini)
 
 ```
-```{r, include=True}
+
+```{r, include=TRUE}
 head(inequality_data)
 ```
 
@@ -126,7 +132,7 @@ merged_data <-
 merged_data %>%
 select(-c("iso2c.y"))
   
-setnames(population_data, "iso2c.x" , "iso2c code", skip_absent = TRUE)
+setnames(merged_data, "iso2c.x" , "iso2c code", skip_absent=TRUE)
 #remove isomatch var
 merged_data$iso2c_match=NULL
 
@@ -136,43 +142,44 @@ merged_data$iso2c_match=NULL
 merged_df <- na.omit(merged_data, select=c("inequality_gini", "population in poverty"))
 ```
 15.)Create new data frame over 30 gini
-```{r omit, include=FALSE}
+```{r data frame, include=FALSE}
 data_greater_30 <- merged_df %>%
 dplyr::filter(inequality_gini > 30)
 
 ```
 16.)Using data_greater_30, use to R to count how many countries have the sequence “ai”in their name.
-```{r omit, include=FALSE}
+```{r count, include=FALSE}
 grep("ai",data_greater_30)
 
 ```
 16.) Use any command from the apply family to take the sum of inequality_gini in data_greater_30.
-```{r omit, include=FALSE}
+```{r apply, include=FALSE}
 
 sum_data<-sapply(data_greater_30$inequality_gini, sum, na.omit=TRUE)
 #print
 sum_data
 ```
 17.) Labelling Variables
-```{r omit, include=FALSE}
+```{r label, include=FALSE}
 # label the variables of merged_df
 #install.packages("labelled")
 library(labelled)
+
 var_label(merged_df) <- list(`country` = "Country",
 `year` = "year",
 `lowinequality` = "Low Inequality Dummy Variable",
 `highinequality` = "High Inequality Dummy Variable",
 `population in poverty` = "Poverty Headcount as Ratio",
 `inequality_gini` = "Inequality Gini Score",
-`iso2c.x`= "ISO2 Country Code")
+`iso2c code` = "ISO2 Country Code")
 ```
 18.) Saving as Stata
-```{r omit, include=FALSE}
+```{r stata, include=FALSE}
 # save the dataset in Stata format with the labels
 library(rio)
 export(merged_df, file = "final_data.dta")
 #problem with export
-setnames(merged_df, "iso2c.x" , "iso2c code", skip_absent = TRUE)
+setnames(merged_df, "iso2c.x", "iso2c code" , skip_absent = TRUE)
 #works 
 ```
 
