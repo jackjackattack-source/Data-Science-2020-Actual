@@ -1,0 +1,178 @@
+---
+title: "Exam 2-Jackson Freeman"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#clear environment
+rm(list=ls(all=TRUE))
+#set the working directory
+setwd("C:/Users/Jack/Documents/Data Science 2020")
+#import data as data frame
+inequality_data<-import("inequality.xlsx")
+```
+
+1.) This data is cross-sectional-it is taken at one point in time (2015). Using the rio package and the HEAD function, we can show this concept.
+```{r, include=True}
+head(inequality_data)
+```
+2.) Subset for Gini of Denmark and Sweden
+
+```{r gini subset for Den+Sweden, include=FALSE}
+subset(inequality_data, c(country=="Sweden", country=="Denmark"), select=inequality_gini) 
+```
+3.) Subset for Brazil
+```{r gini, include=FALSE}
+subset(inequality_data, country=="Brazil", select=inequality_gini)
+```
+4.) Comparing these two countries, we can see that having a low inequality_gini score is better for a country.
+5.) Here we will show the head of the data frame again.
+```{r, include=TRUE}
+head(inequality_data)
+```
+6.) Let's write a function for removing accents.
+```{r removing accents, include=TRUE}
+remove.accents<- function(s){
+old1 <- "ú"
+new1 <- "u"
+s1 <- chartr(old1, new1, s)
+}
+
+#now we will run the function over the data set
+inequality_data$country = remove.accents(inequality_data$country)
+#Running head command to show removed accents
+head(inequality_data)
+```
+
+7.) Sorting countries by lowest gini score.
+```{r sorting data, include=FALSE}
+inequality_data<- arrange(inequality_data,inequality_gini)
+
+```
+```{r, include=True}
+head(inequality_data)
+```
+
+8.) Mean gini score. 
+```{r mean gini score, include=TRUE}
+mean(inequality_data$inequality_gini, na.rm=TRUE)
+```
+9.) Creating dummy variables and ifelse
+```{r if else, include=FALSE}
+#creating dummy variables 
+#load tidyverse
+library(tidyverse)
+inequality_data <-inequality_data %>%
+mutate(highinequality = ifelse(inequality_data$inequality_gini > 36.81375,
+1,
+0))
+
+inequality_data <-
+inequality_data %>%
+mutate(lowinequality = ifelse(inequality_data$inequality_gini < 36.81375,
+1,
+0))
+```
+10.)Cross-tab of data.
+```{r cross tab, include=TRUE}
+library(doBy)
+summaryBy( inequality_gini ~ highinequality, data=inequality_data, FUN=c(mean,length))
+summaryBy( inequality_gini ~ lowinequality, data=inequality_data, FUN=c(mean,length))
+```
+11.)Creating a for loop for 3 actors.
+```{r for loop, include=TRUE}
+# Create an organization vector
+orgs <- c(' World Bank', 'African Development Bank', 'Bill and Melinda Gates Foundation')
+# Create the for statement
+for ( i in orgs){
+print(i)
+}
+```
+12.) I am choosing the World Bank variable of "Poverty headcount ratio at $1.90 a day (2011 PPP) (% of population)" since it will show the percentage of population under the poverty line which can be used for inequality comparisons, especially with other variables like GDP in total.
+13.) Let's import that data into r.
+```{r import, include=TRUE}
+#use WDI library
+library(WDI)
+# After Googling: https://data.worldbank.org/indicator/SI.POV.DDAY
+population_data = WDI(country = "all",
+                      indicator = c("SI.POV.DDAY"), # indicator from web
+                      start = 2015, end = 2015, extra = FALSE, cache = NULL)
+#let's now rename the variable
+library(data.table)
+setnames(population_data, "SI.POV.DDAY" , "population_poverty")
+
+#Let's merge this data
+#Remove NA's first
+population_data <-
+population_data %>%
+dplyr::filter(!(country=="NA"))
+
+library(tidyverse)
+merged_data = left_join(x=inequality_data,
+y=population_data,
+by =c("country", "year"))
+#iso2's don't match, let's find and eliminate them
+library(tidyverse)
+merged_data <-
+merged_data %>%
+mutate(iso2c_match = ifelse(iso2c.x == iso2c.y,
+"yes",
+"no"))
+# list the instances in which the spelling doesn't match
+subset(merged_data, iso2c_match =="no")
+#drop iso2c.y and rename x
+merged_data <-
+merged_data %>%
+select(-c("iso2c.y"))
+  
+setnames(population_data, "iso2c.x" , "iso2c code", skip_absent = TRUE)
+#remove isomatch var
+merged_data$iso2c_match=NULL
+
+```
+14.) Create a new data frame with no missing variables.
+```{r omit, include=FALSE}
+merged_df <- na.omit(merged_data, select=c("inequality_gini", "population in poverty"))
+```
+15.)Create new data frame over 30 gini
+```{r omit, include=FALSE}
+data_greater_30 <- merged_df %>%
+dplyr::filter(inequality_gini > 30)
+
+```
+16.)Using data_greater_30, use to R to count how many countries have the sequence “ai”in their name.
+```{r omit, include=FALSE}
+grep("ai",data_greater_30)
+
+```
+16.) Use any command from the apply family to take the sum of inequality_gini in data_greater_30.
+```{r omit, include=FALSE}
+
+sum_data<-sapply(data_greater_30$inequality_gini, sum, na.omit=TRUE)
+#print
+sum_data
+```
+17.) Labelling Variables
+```{r omit, include=FALSE}
+# label the variables of merged_df
+#install.packages("labelled")
+library(labelled)
+var_label(merged_df) <- list(`country` = "Country",
+`year` = "year",
+`lowinequality` = "Low Inequality Dummy Variable",
+`highinequality` = "High Inequality Dummy Variable",
+`population in poverty` = "Poverty Headcount as Ratio",
+`inequality_gini` = "Inequality Gini Score",
+`iso2c.x`= "ISO2 Country Code")
+```
+18.) Saving as Stata
+```{r omit, include=FALSE}
+# save the dataset in Stata format with the labels
+library(rio)
+export(merged_df, file = "final_data.dta")
+#problem with export
+setnames(merged_df, "iso2c.x" , "iso2c code", skip_absent = TRUE)
+#works 
+```
+
